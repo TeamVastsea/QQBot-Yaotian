@@ -19,7 +19,10 @@ public class BotApp
 
     private const string ConfigPath = @"../../../Config/config.json";
     public static MainConfig Config = null!;
-
+    
+    public static uint MessageCounter;
+    public static uint ProcessedMessageCounter;
+    public static readonly DateTime StartTime = DateTime.Now;
     public async Task Start()
     {
         

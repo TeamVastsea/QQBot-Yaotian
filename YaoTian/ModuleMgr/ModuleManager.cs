@@ -87,7 +87,7 @@ public class ModuleMgr
 
     public bool DispatchGroupMessage(Konata.Core.Bot bot, GroupMessageEvent msg)
     {
-        // Information.MessageReceived++;
+        BotApp.MessageCounter++;
 
         var rev = false;
 
@@ -161,7 +161,8 @@ public class ModuleMgr
                             // if (ret == "") return;
                         
                             // CommandInvokeLogger.Instance.Log(cmd.InnerMethod, msg, msgChain);
-                        
+                            BotApp.ProcessedMessageCounter++;
+
                             switch (cmd.CommandInfo.SendType)
                             {
                                 case SendType.Send:
