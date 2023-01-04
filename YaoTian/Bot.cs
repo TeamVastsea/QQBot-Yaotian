@@ -15,7 +15,7 @@ public class BotApp
     
     public ModuleMgr.ModuleMgr ModuleMgr { get; } = new();
     
-    private static Bot _bot = null!;
+    public static Bot Bot = null!;
 
     private const string ConfigPath = @"../../../Config/config.json";
     public static MainConfig Config = null!;
@@ -30,15 +30,15 @@ public class BotApp
         
 
         //_bot = BotFather.Create("qq uin", "pwd", out botConfig, out botDevice, out botKeyStore, protocol: OicqProtocol.AndroidPad);
-        _bot = BotFather.Create(GetConfig(), GetDevice(), GetKeyStore());
-        
+        Bot = BotFather.Create(GetConfig(), GetDevice(), GetKeyStore());
+        var t = Task.Run(Modules.Webhook.StartListenWebHook);
         // Print the log
         
         if(Config.Environment != "Release")
-            _bot.OnLog += (_, e) => Console.WriteLine(e.EventMessage);
+            Bot.OnLog += (_, e) => Console.WriteLine(e.EventMessage);
 
         // Handle the captcha
-        _bot.OnCaptcha += (s, e) =>
+        Bot.OnCaptcha += (s, e) =>
         {
             switch (e.Type)
             {
@@ -64,17 +64,17 @@ public class BotApp
         //_bot.OnGroupPoke += Poke.OnGroupPoke;
 
         // Handle messages from group
-        _bot.OnGroupMessage += Dispatcher_OnMessage;
+        Bot.OnGroupMessage += Dispatcher_OnMessage;
         // _bot.OnFriendRequest += Command.OnFriendRequest;
         // _bot.OnGroupInvite += Command.OnGroupInvite;
 
         
 
         // Login the bot
-        var result = await _bot.Login();
+        var result = await Bot.Login();
         {
             // Update the keystore
-            if (result) UpdateKeystore(_bot.KeyStore);
+            if (result) UpdateKeystore(Bot.KeyStore);
         }
 
         // cli
@@ -83,8 +83,10 @@ public class BotApp
             switch (Console.ReadLine())
             {
                 case "/stop":
-                    await _bot.Logout();
-                    _bot.Dispose();
+                    await Bot.Logout();
+                    Bot.Dispose();
+                    Modules.Webhook.StopListenWebHook();
+
                     return;
             }
         }
@@ -171,4 +173,6 @@ public class BotApp
 
     private void Dispatcher_OnMessage(Bot bot, GroupMessageEvent msg) =>
         ModuleMgr.DispatchGroupMessage(bot, msg);
+    
+    
 }
