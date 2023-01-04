@@ -31,44 +31,44 @@ public class BotApp
 
         //_bot = BotFather.Create("qq uin", "pwd", out botConfig, out botDevice, out botKeyStore, protocol: OicqProtocol.AndroidPad);
         _bot = BotFather.Create(GetConfig(), GetDevice(), GetKeyStore());
+        
+        // Print the log
+        
+        if(Config.Environment != "Release")
+            _bot.OnLog += (_, e) => Console.WriteLine(e.EventMessage);
+
+        // Handle the captcha
+        _bot.OnCaptcha += (s, e) =>
         {
-            // Print the log
-            
-            if(Config.Environment != "Release")
-                _bot.OnLog += (_, e) => Console.WriteLine(e.EventMessage);
-
-            // Handle the captcha
-            _bot.OnCaptcha += (s, e) =>
+            switch (e.Type)
             {
-                switch (e.Type)
-                {
-                    case CaptchaEvent.CaptchaType.Sms:
-                        Console.WriteLine(e.Phone);
-                        s.SubmitSmsCode(Console.ReadLine());
-                        break;
+                case CaptchaEvent.CaptchaType.Sms:
+                    Console.WriteLine(e.Phone);
+                    s.SubmitSmsCode(Console.ReadLine());
+                    break;
 
-                    case CaptchaEvent.CaptchaType.Slider:
-                        Console.WriteLine(e.SliderUrl);
-                        s.SubmitSliderTicket(Console.ReadLine());
-                        break;
+                case CaptchaEvent.CaptchaType.Slider:
+                    Console.WriteLine(e.SliderUrl);
+                    s.SubmitSliderTicket(Console.ReadLine());
+                    break;
 
-                    default:
-                    case CaptchaEvent.CaptchaType.Unknown:
-                        break;
-                }
-            };
+                default:
+                case CaptchaEvent.CaptchaType.Unknown:
+                    break;
+            }
+        };
 
-            ModuleMgr.Init();
+        ModuleMgr.Init();
 
-            // Handle poke messages
-            //_bot.OnGroupPoke += Poke.OnGroupPoke;
+        // Handle poke messages
+        //_bot.OnGroupPoke += Poke.OnGroupPoke;
 
-            // Handle messages from group
-            _bot.OnGroupMessage += Dispatcher_OnMessage;
-            // _bot.OnFriendRequest += Command.OnFriendRequest;
-            // _bot.OnGroupInvite += Command.OnGroupInvite;
+        // Handle messages from group
+        _bot.OnGroupMessage += Dispatcher_OnMessage;
+        // _bot.OnFriendRequest += Command.OnFriendRequest;
+        // _bot.OnGroupInvite += Command.OnGroupInvite;
 
-        }
+        
 
         // Login the bot
         var result = await _bot.Login();
