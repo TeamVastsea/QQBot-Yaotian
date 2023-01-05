@@ -120,11 +120,11 @@ public class ModuleBase
             case Matching.StartsWithLeadChar:
             {
                 var wd = $"/{keyword}";
-                if (s.StartsWith(wd, true, null))
+                if (s.Split(" ")[0].StartsWith(wd, true, null) && s.Split(" ")[0].Length == wd.Length)
                     return (true, s[wd.Length..].Trim());
                 break;
             }
-            case Matching.StartsWith when s.StartsWith(keyword, true, null):
+            case Matching.StartsWith when s.Split(" ")[0].StartsWith(keyword, true, null) && s.Split(" ")[0].Length == keyword.Length:
                 return (true, s[keyword.Length..].Trim());
 
             case Matching.AnyWithLeadChar when s.Length >= 1 && s[0] == '/':
