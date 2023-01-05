@@ -127,7 +127,16 @@ public class ModuleMgr
 
             var (succ, body) = cmd.MethodModule.CheckKeyword(cmd.CommandInfo.Command, rawMsg, cmd.CommandInfo.Matching);
 
-            if (!succ) continue;
+            if (!succ)
+            {
+                if (cmd.CommandInfo.Alias != null)
+                    foreach (var cmdAlias in cmd.CommandInfo.Alias)
+                    {
+                        (succ, body) = cmd.MethodModule.CheckKeyword(cmdAlias, rawMsg, cmd.CommandInfo.Matching);
+                        if (succ) break;
+                    }
+                if (!succ) continue;
+            }
 
             var userLevel = PermissionLevel.User;
             if (cmd.CommandInfo.State is State.Disabled or State.DisableByDefault)
