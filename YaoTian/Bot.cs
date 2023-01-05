@@ -4,6 +4,7 @@ using Konata.Core.Common;
 using Konata.Core.Events.Model;
 using Konata.Core.Interfaces;
 using Konata.Core.Interfaces.Api;
+using NLog;
 using YaoTian.JsonModels;
 
 
@@ -20,22 +21,33 @@ public class BotApp
     private const string ConfigPath = @"../../../Config/config.json";
     public static MainConfig Config = null!;
     
+    public static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+    
     public static uint MessageCounter;
     public static uint ProcessedMessageCounter;
     public static readonly DateTime StartTime = DateTime.Now;
+    public static bool DebugMode = false;
     public async Task Start()
     {
         
+        LogManager.LoadConfiguration(@"../../../Config/NLog.config");
+
+        Logger.Info("Starting program...");
+
         Config = JsonSerializer.Deserialize<MainConfig>(await File.ReadAllTextAsync(ConfigPath))!;
-        
+        Logger.Info("Config loaded");
 
         //_bot = BotFather.Create("qq uin", "pwd", out botConfig, out botDevice, out botKeyStore, protocol: OicqProtocol.AndroidPad);
         Bot = BotFather.Create(GetConfig(), GetDevice(), GetKeyStore());
-        var t = Task.Run(Modules.Webhook.StartListenWebHook);
-        // Print the log
         
-        if(Config.Environment != "Release")
-            Bot.OnLog += (_, e) => Console.WriteLine(e.EventMessage);
+        if(Config.Environment == "Debug")
+        {
+            DebugMode = true;
+            Logger.Debug($"Debug mode enabled, only messages from {Config.AdminGroup} will be processed");    
+        }   
+        
+        // // strongly don't recommend to use this
+        // Bot.OnLog += (_, e) => Console.WriteLine(e.EventMessage);
 
         // Handle the captcha
         Bot.OnCaptcha += (s, e) =>
@@ -43,13 +55,16 @@ public class BotApp
             switch (e.Type)
             {
                 case CaptchaEvent.CaptchaType.Sms:
-                    Console.WriteLine(e.Phone);
+                    Logger.Info($"Need sms captcha code: {e.Phone}");
                     s.SubmitSmsCode(Console.ReadLine());
+                    Logger.Info("Submitted sms captcha code");
                     break;
 
                 case CaptchaEvent.CaptchaType.Slider:
                     Console.WriteLine(e.SliderUrl);
+                    Logger.Info($"Need slider captcha ticket: {e.SliderUrl}");
                     s.SubmitSliderTicket(Console.ReadLine());
+                    Logger.Info("Submitted slider captcha ticket");
                     break;
 
                 default:
@@ -57,37 +72,51 @@ public class BotApp
                     break;
             }
         };
-
+        
+        Logger.Info("Loading modules and commands...");
         ModuleMgr.Init();
+        Logger.Info($"{ModuleMgr.ModuleList.Count} modules and {ModuleMgr.CommandList.Count} commands loaded");
 
-        // Handle poke messages
-        //_bot.OnGroupPoke += Poke.OnGroupPoke;
 
         // Handle messages from group
         Bot.OnGroupMessage += Dispatcher_OnMessage;
         // _bot.OnFriendRequest += Command.OnFriendRequest;
         // _bot.OnGroupInvite += Command.OnGroupInvite;
-
         
-
         // Login the bot
         var result = await Bot.Login();
         {
             // Update the keystore
             if (result) UpdateKeystore(Bot.KeyStore);
         }
-
+        
+        Logger.Info("Bot logged in");
         // cli
         while (true)
         {
             switch (Console.ReadLine())
             {
+                case "/exit":
+                    await Bot.Logout();
+                    Bot.Dispose();
+                    Logger.Info("Bot logged out\nExiting...(may need force quit)");
+                    return;
+                case "/stat" or "/status":
+                    Logger.Info($"Message counter: {MessageCounter}\n" + 
+                                $"Processed message counter: {ProcessedMessageCounter}\n" +
+                                $"Uptime: {DateTime.Now - StartTime}");
+                    break;
+                case "/debug":
+                    DebugMode = !DebugMode;
+                    Logger.Info($"Debug mode {(DebugMode ? "enabled" : "disabled")}");
+                    break;
                 case "/stop":
                     await Bot.Logout();
                     Bot.Dispose();
-                    Modules.Webhook.StopListenWebHook();
-
                     return;
+                default:
+                    Logger.Warn("Unknown command received from cli");
+                    break;
             }
         }
     }
@@ -99,11 +128,13 @@ public class BotApp
     /// <returns></returns>
     private static BotConfig GetConfig()
     {
+        var protocol = OicqProtocol.AndroidPad;
+        Logger.Debug($"Using protocol: {protocol.ToString()}");
         return new BotConfig
         {
             EnableAudio = true,
             TryReconnect = true,
-            Protocol = OicqProtocol.AndroidPad
+            Protocol = protocol
         };
     }
 
@@ -116,6 +147,7 @@ public class BotApp
         // Read the device from config
         if (File.Exists(Config.DeviceJsonPath))
         {
+            Logger.Debug("Loading device from config");
             return JsonSerializer.Deserialize
                 <BotDevice>(File.ReadAllText(Config.DeviceJsonPath));
         }
@@ -127,7 +159,7 @@ public class BotApp
                 new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(Config.DeviceJsonPath, deviceJson);
         }
-
+        Logger.Info("Created a new device");
         return device;
     }
 
@@ -144,16 +176,17 @@ public class BotApp
                 <BotKeyStore>(File.ReadAllText(Config.KeystoreJsonPath));
         }
 
-        Console.WriteLine("For first running, please " + "type your account and password.");
+        Logger.Warn("No keystore found");
+        Console.WriteLine("For first running, please type your account and password.");
 
         Console.Write("Account: ");
         var account = Console.ReadLine();
-
+        
         Console.Write("Password: ");
         var password = Console.ReadLine();
-
+        
+        Logger.Info($"Created a new keystore for {account}");
         // Create new one
-        Console.WriteLine("Bot created.");
         return UpdateKeystore(new BotKeyStore(account, password));
     }
 
@@ -167,12 +200,18 @@ public class BotApp
         var deviceJson = JsonSerializer.Serialize(keystore,
             new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(Config.KeystoreJsonPath, deviceJson);
+        Logger.Debug("Keystore updated");
         return keystore;
     }
     
 
-    private void Dispatcher_OnMessage(Bot bot, GroupMessageEvent msg) =>
+    private void Dispatcher_OnMessage(Bot bot, GroupMessageEvent msg)
+    {
+        MessageCounter++;
+        if (DebugMode && msg.GroupUin != Config.AdminGroup)
+            return;
         ModuleMgr.DispatchGroupMessage(bot, msg);
+    }
     
     
 }

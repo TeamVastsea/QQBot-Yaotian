@@ -53,7 +53,7 @@ public class CommandAttribute : Attribute
     
     public PermissionLevel Permission { get; set; } = PermissionLevel.User;
     public SendType SendType { get; set; } = SendType.Send;
-
+    
     public CommandAttribute(string cmd)
     {
         Command = cmd;

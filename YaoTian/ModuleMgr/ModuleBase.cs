@@ -18,12 +18,29 @@ public class ModuleBase
         var attr = GetType().GetCustomAttribute<ModuleAttribute>();
         return attr is not null ? attr.Version : "1.0.0";
     }
+    
+    public bool OnNeedStart()
+    {
+        var attr = GetType().GetCustomAttribute<ModuleAttribute>();
+        return attr.NeedStart;
+    }
 
     public bool OnInit() => true;
     public bool OnReload() => true;
     public bool OnGroupMessage(GroupMessageEvent message) => false;
     
     public List<CommandBase> LocalCommandBases { get; private set; } = new();
+
+    public void StartService()
+    {
+        var t = GetType();
+        var methods = t.GetMethods();
+        var startMethod = methods.FirstOrDefault(x => x.Name == "Start");
+        if (startMethod is not null)
+        {
+            Task.Run(() => startMethod.Invoke(this, null));
+        }
+    }
     
     public void LoadCommands()
     {
@@ -56,7 +73,10 @@ public class ModuleBase
                     
                     LocalCommandBases.Add(cmdFuncBase);
                     BotApp.Instance.ModuleMgr.CommandList.Add(cmdFuncBase);
-                    
+
+                    if (cmd.Name == "")
+                        cmd.Name = cmd.Command;
+                    BotApp.Logger.Debug($"Command <{cmd.Name}> from [{OnGetName()}] loaded.");
                     // if (cmd.State is not State.Normal)
                     //     BotLogger.LogW(nameof(LoadCommands),
                     //         $"{t}.{method.Name} => [{cmd.State}] {cmd.Name} {cmd.ShowTip} ");

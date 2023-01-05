@@ -12,14 +12,14 @@ namespace YaoTian.Modules;
 internal class InformationModule : ModuleBase
 {
     [Command("status",
+        Name = "Status",
         Alias = new[] { "stats" },
         Description = "returns the current status of the bot",
         Matching = Matching.ExactWithLeadChar)]
     public static MessageBuilder OnCommandStatus(Bot bot, GroupMessageEvent msg)
     {
-        Console.WriteLine("123");
+        BotApp.Logger.Debug("InformationModule " + "OnCommandStatus " + "Status command received");
         return new MessageBuilder()
-            // Core descriptions
             .Text($"YaoTian Bot Status\n")
 
             // System status

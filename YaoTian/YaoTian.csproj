@@ -14,10 +14,12 @@
       <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.2.0" />
       <PackageReference Include="Microsoft.AspNetCore.Mvc.Abstractions" Version="2.2.0" />
       <PackageReference Include="Microsoft.AspNetCore.Routing" Version="2.2.2" />
+      <PackageReference Include="NLog" Version="5.1.1" />
+      <PackageReference Include="NLog.Database" Version="5.1.1" />
+      <PackageReference Include="System.Data.SQLite" Version="1.0.117" />
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Config" />
       <Folder Include="ModuleMgr" />
     </ItemGroup>
 

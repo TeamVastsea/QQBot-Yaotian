@@ -12,6 +12,7 @@ namespace YaoTian.Modules;
 internal class EntertainmentModule : ModuleBase
 {
     [Command("luck",
+        Name = "Luck",
         Alias = new[] { "lucky" },
         Matching = Matching.StartsWithLeadChar,
         Description = "Get your lucky number for today")]
@@ -46,13 +47,11 @@ internal class EntertainmentModule : ModuleBase
     {
         var seedStr = userId;
         seedStr += DateTime.Now.ToString("yyyy-MM-dd");
-        Console.WriteLine(seedStr);
         var seedByte = Encoding.UTF8.GetBytes(seedStr);
         
         var seedMd5 = new System.Security.Cryptography.MD5CryptoServiceProvider().ComputeHash(seedByte);
         var mdkPart = BitConverter.ToString(seedMd5).Replace("-", "")[..8];
         var seed = Convert.ToInt64(mdkPart, 16);
-        Console.WriteLine(seed);
 
         const long m = 4294967296;
         const int a = 1103515245;
@@ -60,6 +59,8 @@ internal class EntertainmentModule : ModuleBase
 
         var rd = (a * seed + c) % m / (double)(m - 1);
         var output = (int)(rd * 100);
+        BotApp.Logger.Debug($"[Luck]Seed string: {seedStr} => {output}");
+
         return output;
     }
 }

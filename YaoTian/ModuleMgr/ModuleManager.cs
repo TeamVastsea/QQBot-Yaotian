@@ -1,8 +1,10 @@
 using System.Reflection;
+using System.Threading.Channels;
 using Konata.Core.Events.Model;
 using Konata.Core.Interfaces.Api;
 using Konata.Core.Message;
 using Konata.Core.Message.Model;
+using NLog;
 
 namespace YaoTian.ModuleMgr;
 
@@ -12,7 +14,6 @@ public class ModuleMgr
 
     // Commands must be rearranged by it's matching type globally.
     private List<CommandBase> _commands = new();
-    public int CommandCount => _commands.Count;
     public List<CommandBase> CommandList => _commands;
 
     public List<ModuleBase> ModuleList => _modules;
@@ -29,10 +30,18 @@ public class ModuleMgr
 
             try
             {
+                if (module.OnNeedStart())
+                {
+                    module.StartService();
+                    _modules.Add(module);
+                    BotApp.Logger.Debug($"Service Module [{module.OnGetName()}] started");
+                    continue;
+                }
                 module.LoadCommands();
                 module.OnInit();
                 module.OnReload();
-
+                
+                BotApp.Logger.Debug($"Module [{module.OnGetName()}] loaded with {module.LocalCommandBases.Count} command(s)");
                 //load module config
                 var fields = type.GetFields(
                     BindingFlags.NonPublic |
@@ -87,8 +96,12 @@ public class ModuleMgr
 
     public bool DispatchGroupMessage(Konata.Core.Bot bot, GroupMessageEvent msg)
     {
-        BotApp.MessageCounter++;
-
+        if (msg.MemberUin == bot.Uin)
+        {
+            BotApp.Logger.Info($"[S]Bot message send to [{msg.GroupName}({msg.GroupUin})] => \n{msg.Message.Chain}");
+            return false;
+        }
+        
         var rev = false;
 
         foreach (var module in _modules)
@@ -100,12 +113,9 @@ public class ModuleMgr
 
         if (!rev)
             rev = ProcessCommands(bot, msg);
-
-        //rev = dynamic_inst.OnRunCode(messageDesc);
-
-        // if (rev)
-        //     Information.MessageProcessed++;
-
+        
+        if (!rev)
+            BotApp.Logger.Info($"[I][{msg.GroupName}({msg.GroupUin})]<{msg.MemberCard}({msg.MemberUin})> -> {msg.Message.Chain.ToString().Replace("\n", "\\n")} => No command matched, ignored.");
         return rev;
     }
 
@@ -113,19 +123,17 @@ public class ModuleMgr
     {
         foreach (var cmd in _commands)
         {
-            Console.WriteLine(cmd.CommandInfo.Name);
             var rawMsg = msg.Chain.GetChain<TextChain>().Content;
-            
-            Console.WriteLine(rawMsg);
-            
+
             var (succ, body) = cmd.MethodModule.CheckKeyword(cmd.CommandInfo.Command, rawMsg, cmd.CommandInfo.Matching);
-            Console.WriteLine(succ);
+
             if (!succ) continue;
 
             var userLevel = PermissionLevel.User;
             if (cmd.CommandInfo.State is State.Disabled or State.DisableByDefault)
                 continue;
-
+            
+            BotApp.Logger.Info($"[M][{msg.GroupName}({msg.GroupUin})]<{msg.MemberCard}({msg.MemberUin})> -> {msg.Message.Chain} => Matched <{cmd.CommandInfo.Command}> command");
             if (userLevel >= cmd.CommandInfo.Permission)
             {
                 Task.Run(() =>
@@ -155,10 +163,7 @@ public class ModuleMgr
                             var msgChain = result as MessageBuilder ?? (result as Task<MessageBuilder>)?.Result;
                             var ret = msgChain;
                             if (ret is null) return;
-                            Console.WriteLine(msgChain.ToString());
-
-                            // BotLogger.LogI(cmd.MethodModule.OnGetName(), ret);
-                            // if (ret == "") return;
+                            
                         
                             // CommandInvokeLogger.Instance.Log(cmd.InnerMethod, msg, msgChain);
                             BotApp.ProcessedMessageCounter++;
@@ -166,6 +171,7 @@ public class ModuleMgr
                             switch (cmd.CommandInfo.SendType)
                             {
                                 case SendType.Send:
+                                    BotApp.Logger.Info($"Sending a message to [{msg.GroupName}({msg.GroupUin})] in response to <{msg.MemberCard}({msg.MemberUin})> -> {msg.Message.Chain}");
                                     bot.SendGroupMessage(msg.GroupUin, ret);
                                     break;
                                 case SendType.Reply:
