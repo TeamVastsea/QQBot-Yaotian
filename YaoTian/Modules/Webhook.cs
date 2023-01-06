@@ -64,23 +64,33 @@ public class CallbackController : Controller
         var body = await new StreamReader(stream).ReadToEndAsync();
         
         BotApp.Logger.Debug("[Gitea]Received callback");
-        
-        var eventType = Request.Headers["x-gitea-event"];
-        switch (eventType)
+
+        try
         {
-            case "push":
-                var jsonObj = JsonSerializer.Deserialize<JsonModels.PushJsonModel>(body);
-                if (jsonObj != null)
-                {
-                    var text = EventHandlers.ParsePushEvent(jsonObj);
-                    BotApp.Logger.Debug("[Gitea]Push event parsed");
-                    await BotApp.Bot.SendGroupMessage(BotApp.Config.AdminGroup, new MessageBuilder().Text(text));
-                    return Ok("success");
-                }
-                BotApp.Logger.Error("Gitea Push Event Parse Failed: "+body);
-                break;
+            var eventType = Request.Headers["x-gitea-event"];
+            switch (eventType)
+            {
+                case "push":
+                    var jsonObj = JsonSerializer.Deserialize<JsonModels.PushJsonModel>(body);
+                    if (jsonObj != null)
+                    {
+                        var text = EventHandlers.ParsePushEvent(jsonObj);
+                        BotApp.Logger.Debug("[Gitea]Push event parsed");
+                        await BotApp.Bot.SendGroupMessage(BotApp.Config.AdminGroup, new MessageBuilder().Text(text));
+                        return Ok("success");
+                    }
+
+                    BotApp.Logger.Error("Gitea Push Event Parse Failed: " + body);
+                    break;
+            }
+
+            return Ok("success");
         }
-        return Ok("success");
+        catch (Exception e)
+        {
+            BotApp.Logger.Error(e, "Gitea Event Parse Failed");
+            return Ok("failed");
+        }
     }
     
     
