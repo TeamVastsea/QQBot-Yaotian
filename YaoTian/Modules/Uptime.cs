@@ -27,7 +27,7 @@ public class CallbackController : Controller
         BotApp.Logger.Debug("[Uptime]Received callback");
         try
         {
-            var jsonObj = JsonSerializer.Deserialize<JsonModels.RootObject>(body);
+            var jsonObj = JsonSerializer.Deserialize<JsonModels.UptimeCallbackObj>(body);
             if (jsonObj != null)
             {
                 msg = $"{jsonObj.msg}";

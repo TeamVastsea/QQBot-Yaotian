@@ -1,7 +1,7 @@
 namespace YaoTian.JsonModels;
 
 
-public class RootObject
+public class UptimeCallbackObj
 {
     public Heartbeat heartbeat { get; set; }
     public Monitor monitor { get; set; }

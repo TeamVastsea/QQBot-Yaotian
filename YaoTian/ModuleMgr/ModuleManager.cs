@@ -191,21 +191,8 @@ public class ModuleMgr
                                     throw new ArgumentOutOfRangeException($"No such type: {cmd.CommandInfo.SendType}");
                             }
                         
-                            // Information.MessageSent++;
                         }
                     }
-                    // catch (TargetInvocationException ex)
-                    // {
-                    //     BotLogger.LogE(cmd.MethodModule.OnGetName(), nameof(TargetInvocationException));
-                    //     BotLogger.LogE(cmd.MethodModule.OnGetName(),
-                    //         $"[{cmd.InnerMethod?.Name}] {ex.InnerException?.Message}\n{ex.InnerException?.StackTrace}");
-                    // }
-                    // catch (AggregateException ex)
-                    // {
-                    //     BotLogger.LogE(cmd.MethodModule.OnGetName(), nameof(AggregateException));
-                    //     BotLogger.LogE(cmd.MethodModule.OnGetName(),
-                    //         $"[{cmd.InnerMethod?.Name}] {ex.InnerException?.Message}\n{ex.InnerException?.StackTrace}");
-                    // }
                     catch (Exception ex)
                     {
                         // BotLogger.LogE(cmd.MethodModule.OnGetName(),

@@ -47,6 +47,7 @@ public class BotApp
         }   
         
         // // strongly don't recommend to use this
+        // // only use this if bot login failed to get the error message and debug
         // Bot.OnLog += (_, e) => Console.WriteLine(e.EventMessage);
 
         // Handle the captcha
