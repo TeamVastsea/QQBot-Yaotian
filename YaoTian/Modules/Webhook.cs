@@ -156,7 +156,7 @@ public static class EventHandlers
         // var releaseCount = pushJsonModel.repository.release_counter;
         var branch = pushJsonModel.Ref.Replace("refs/heads/", "");
 
-        var msg = "[GitLab Monitor]" +
+        var msg = "[GitLab Monitor]\n" +
                     $"{pusher} pushed {pushJsonModel.total_commits_count} commit(s) to\n" +
                     $"{projectNamespace}/{projectName}[branch:{branch}]\n" +
                     $"Added: {addedCount} | " +
