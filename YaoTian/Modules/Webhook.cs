@@ -70,7 +70,7 @@ public class CallbackController : Controller
             var eventType = Request.Headers["x-gitlab-event"];
             switch (eventType)
             {
-                case "Push Hook":
+                case "Push Hook" or "System Hook":
                     var jsonObj = JsonSerializer.Deserialize<JsonModels.PushJsonModel>(body);
                     if (jsonObj != null)
                     {
