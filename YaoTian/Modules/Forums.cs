@@ -20,6 +20,7 @@ public class Forums : ModuleBase
         var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.Add("XF-API-Key", BotApp.Config.ForumsApiKey);
         var response = httpClient.GetAsync(url).Result;
+        response.EnsureSuccessStatusCode();
         var content = response.Content.ReadAsStringAsync().Result;
 
         var forumObj = JsonSerializer.Deserialize<ForumObject.ForumObj>(content);

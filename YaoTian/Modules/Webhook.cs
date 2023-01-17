@@ -55,32 +55,32 @@ public class CallbackController : Controller
     
     
     [HttpPost]
-    [Route("/gitea")]
-    public async Task<IActionResult> GiteaPost()
+    [Route("/git")]
+    public async Task<IActionResult> GitlabPost()
     {
         var stream = new MemoryStream();
         await Request.Body.CopyToAsync(stream);
         stream.Seek(0, SeekOrigin.Begin);
         var body = await new StreamReader(stream).ReadToEndAsync();
         
-        BotApp.Logger.Debug("[Gitea]Received callback");
+        BotApp.Logger.Debug("[Gitlab]Received callback");
 
         try
         {
-            var eventType = Request.Headers["x-gitea-event"];
+            var eventType = Request.Headers["x-gitlab-event"];
             switch (eventType)
             {
-                case "push":
+                case "Push Hook":
                     var jsonObj = JsonSerializer.Deserialize<JsonModels.PushJsonModel>(body);
                     if (jsonObj != null)
                     {
                         var text = EventHandlers.ParsePushEvent(jsonObj);
-                        BotApp.Logger.Debug("[Gitea]Push event parsed");
+                        BotApp.Logger.Debug("[Gitlab]Push event parsed");
                         await BotApp.Bot.SendGroupMessage(BotApp.Config.AdminGroup, new MessageBuilder().Text(text));
                         return Ok("success");
                     }
 
-                    BotApp.Logger.Error("Gitea Push Event Parse Failed: " + body);
+                    BotApp.Logger.Error("Gitlab Push Event Parse Failed: " + body);
                     break;
             }
 
@@ -88,7 +88,7 @@ public class CallbackController : Controller
         }
         catch (Exception e)
         {
-            BotApp.Logger.Error(e, "Gitea Event Parse Failed");
+            BotApp.Logger.Error(e, "Gitlab Event Parse Failed");
             return Ok("failed");
         }
     }
@@ -100,28 +100,54 @@ public static class EventHandlers
 {
     public static string ParsePushEvent(JsonModels.PushJsonModel pushJsonModel)
     {
-        var ifPrivate = pushJsonModel.repository.Private;
-        if (ifPrivate)
-            throw new Exception("Private Repo, Ignored");
+        // var ifPrivate = pushJsonModel.repository.Private;
+        // if (ifPrivate)
+        //     throw new Exception("Private Repo, Ignored");
         var commitMsg = "";
         var addedCount = 0;
         var modifiedCount = 0;
         var removedCount = 0;
+        var addedList = new List<string>();
+        var modifiedList = new List<string>();
+        var removedList = new List<string>();
+        
         for(var i = 0; i < pushJsonModel.commits.Length; i++)
         {
             var commit = pushJsonModel.commits[i];
             var commitTime = DateTime.Parse(commit.timestamp).ToString("yyyy-MM-dd HH:mm:ss");
-            addedCount += commit.added.Length;
-            modifiedCount += commit.modified.Length;
-            removedCount += commit.removed.Length;
+            var added = commit.added;
+            var modified = commit.modified;
+            var removed = commit.removed;
+            if(added != null && added.Length != 0)
+                addedList.AddRange(added);
+
+            if(modified != null && modified.Length != 0)
+                modifiedList.AddRange(modified);
+
+            if(removed != null && removed.Length != 0)
+                removedList.AddRange(removed);
+            // modifiedList.AddRange(modified);
+            // removedList.AddRange(removed);
             commitMsg += $"[{i+1}]@{commitTime}\n{commit.message}\n";
         }
         
-        var pusher = pushJsonModel.pusher.username;
-        var repoName = pushJsonModel.repository.name;
-        var repoOwner = pushJsonModel.repository.owner.username;
-        var repoUrl = pushJsonModel.repository.html_url;
-        var repoSizeFormatted = pushJsonModel.repository.size < 10240 ? $"{pushJsonModel.repository.size}KB" : $"{pushJsonModel.repository.size / 1024}MB";
+        //remove duplicate
+        addedList = addedList.Distinct().ToList();
+        modifiedList = modifiedList.Distinct().ToList();
+        removedList = removedList.Distinct().ToList();
+        
+        addedCount = addedList.Count;
+        modifiedCount = modifiedList.Count;
+        removedCount = removedList.Count;
+
+        var pusher = pushJsonModel.user_name;
+        // var repoName = pushJsonModel.repository.name;
+        // var repoNamespace = pushJsonModel.repository.name;
+        // var repoUrl = pushJsonModel.repository.homepage;
+        var projectName = pushJsonModel.project.name;
+        var projectNamespace = pushJsonModel.project.Namespace;
+        var projectUrl = pushJsonModel.project.web_url;
+        // var repoSizeFormatted = pushJsonModel.repository.size < 10240 ? $"{pushJsonModel.repository.size}KB" : $"{pushJsonModel.repository.size / 1024}MB";
         // var starCount = pushJsonModel.repository.stars_count;
         // var forkCount = pushJsonModel.repository.forks_count;
         // var watchCount = pushJsonModel.repository.watchers_count;
@@ -130,14 +156,15 @@ public static class EventHandlers
         // var releaseCount = pushJsonModel.repository.release_counter;
         var branch = pushJsonModel.Ref.Replace("refs/heads/", "");
 
-        var msg = $"{pusher} pushed {pushJsonModel.total_commits} commit(s) to\n" +
-                    $"{repoOwner}/{repoName}[branch:{branch}]\n" +
+        var msg = "[GitLab Monitor]" +
+                    $"{pusher} pushed {pushJsonModel.total_commits_count} commit(s) to\n" +
+                    $"{projectNamespace}/{projectName}[branch:{branch}]\n" +
                     $"Added: {addedCount} | " +
                     $"Modified: {modifiedCount} | " +
                     $"Deleted: {removedCount}\n" +
                     $"Commit message:\n{commitMsg}" +
-                    $"Repo url: {repoUrl}\n" +
-                    $"Repo size: {repoSizeFormatted}";
+                    $"Repo url: {projectUrl}";
+                    // $"Repo size: {repoSizeFormatted}";
         
         return msg;
     }
@@ -160,7 +187,7 @@ public class Startup
 
 [Module("Webhook",
     Version = "1.1.0",
-    Description = "Notify when the server is down; Notify gitea events",
+    Description = "Notify when the server is down; Notify Gitlab events",
     NeedStart = true)]
 public class Webhook: ModuleBase
 {
@@ -179,7 +206,7 @@ public class Webhook: ModuleBase
         host.Run();
         Host = host;
         BotApp.Logger.Debug("[Uptime]Webhook server started");
-        BotApp.Logger.Debug("[Gitea]Webhook server started");
+        BotApp.Logger.Debug("[Gitlab]Webhook server started");
 
     }
     
