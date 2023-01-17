@@ -4,7 +4,10 @@ using Konata.Core.Common;
 using Konata.Core.Events.Model;
 using Konata.Core.Interfaces;
 using Konata.Core.Interfaces.Api;
+using Konata.Core.Message;
 using NLog;
+using MongoDB.Bson;
+using MongoDB.Driver;
 using YaoTian.JsonModels;
 
 
@@ -81,6 +84,7 @@ public class BotApp
 
         // Handle messages from group
         Bot.OnGroupMessage += Dispatcher_OnMessage;
+        // Bot.OnGroupMemberIncrease += Dispatcher_OnGroupMemberIncrease;
         // _bot.OnFriendRequest += Command.OnFriendRequest;
         // _bot.OnGroupInvite += Command.OnGroupInvite;
         
@@ -213,6 +217,28 @@ public class BotApp
             return;
         ModuleMgr.DispatchGroupMessage(bot, msg);
     }
-    
+
+    private void Dispatcher_OnMemberJoin(Bot bot, GroupMessageEvent msg)
+    {
+        var member = msg.MemberUin.ToString();
+        var client = new MongoClient(Config.MongoUrl);
+        var database = client.GetDatabase("vastsea");
+        var collection = database.GetCollection<BsonDocument>("blockList");
+        var filter = Builders<BsonDocument>.Filter.Eq("QQCode", member);
+        var document = collection.Find(filter).FirstAsync();
+
+        if (document.Result == null) return;
+        bot.SendGroupMessage(msg.GroupUin, new MessageBuilder().At(msg.MemberUin).Text($"你已被拉黑\n原因: {document.Result["Reason"]}\n处理人: {document.Result["Source"]}"));
+        Logger.Info($"Detected Blocked user {msg.MemberCard}[{member}] @ {msg.GroupName}[{msg.GroupUin}]");
+        try
+        {
+            bot.GroupKickMember(msg.GroupUin, msg.MemberUin, true);
+        }
+        catch (Exception e)
+        {
+            Logger.Warn(e.Message);
+        }
+    }
+
     
 }

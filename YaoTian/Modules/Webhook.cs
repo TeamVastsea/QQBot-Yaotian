@@ -186,8 +186,8 @@ public class Startup
 
 
 [Module("Webhook",
-    Version = "1.1.0",
-    Description = "Notify when the server is down; Notify Gitlab events",
+    Version = "2.1.0",
+    Description = "Notify when the server is down; Notify GitLab events",
     NeedStart = true)]
 public class Webhook: ModuleBase
 {

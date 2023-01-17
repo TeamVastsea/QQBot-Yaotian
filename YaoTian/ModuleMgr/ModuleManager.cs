@@ -139,6 +139,12 @@ public class ModuleMgr
             }
 
             var userLevel = PermissionLevel.User;
+            if (BotApp.Config.AdminList.Contains(msg.MemberUin))
+                userLevel = PermissionLevel.Admin;
+            else if (BotApp.Config.ModeratorList.Contains(msg.MemberUin))
+                userLevel = PermissionLevel.Moderator;
+            
+
             if (cmd.CommandInfo.State is State.Disabled or State.DisableByDefault)
                 continue;
             
