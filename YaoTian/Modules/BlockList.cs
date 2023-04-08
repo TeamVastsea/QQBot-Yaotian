@@ -14,7 +14,7 @@ internal class BlockList : ModuleBase
 {
     [Command("block",
         Name = "Block",
-        Alias = new[] { "ban" },
+        Alias = new[] { "ban", "拉黑" },
         Permission = PermissionLevel.Admin,
         Matching = Matching.StartsWithLeadChar,
         Description = "Add a user to the block list")]
@@ -31,7 +31,7 @@ internal class BlockList : ModuleBase
         var database = client.GetDatabase("vastsea");
         var collection = database.GetCollection<BsonDocument>("blockList");
         
-        var source = $"{msg.GroupName}[{msg.GroupUin}] - {msg.MemberCard}[{msg.MemberUin}]";
+        var source = $"{msg.MemberCard}";
         var qqList = args[0].Replace("，", ",").Split(',');
         var reason = string.Join(" ", args.Skip(1));
         
@@ -44,7 +44,7 @@ internal class BlockList : ModuleBase
                 { "QQCode", qq },
                 { "Reason", reason },
                 { "Source", source },
-                { "Time", msg.EventTime }
+                { "Time", msg.EventTime.AddHours(8) }
             };
             documents.Add(document);
         }
@@ -54,44 +54,42 @@ internal class BlockList : ModuleBase
     }
     
     
-    [Command("blockquery",
-        Name = "BlockQuery",
-        Alias = new[] { "banquery", "banq", "blockq" },
-        Permission = PermissionLevel.Admin,
-        Matching = Matching.StartsWithLeadChar,
-        Description = "Add a user to the block list")]
-    public static MessageBuilder OnCommandBlockQuery(Bot bot, GroupMessageEvent msg)
-    {
-        var args = msg.ParseArgListFromMsgEvent();
-        if (args.Count < 2)
-            return new MessageBuilder().Text("指令格式: /block <qqCode[,qqCode2,...,qqCodeN]> <reason>\n" +
-                                                "示例: /ban 114514 具体原因\n/ban 114514,1919810 具体原因\n" +
-                                                "原因请用纯文本(可包含空格)，图片等建议使用图床，或提供详细文章链接。");
-        
-        var mongoUrl = BotApp.Config.MongoUrl;
-        var client = new MongoClient(mongoUrl);
-        var database = client.GetDatabase("vastsea");
-        var collection = database.GetCollection<BsonDocument>("blockList");
-        
-        var source = $"{msg.GroupName}[{msg.GroupUin}] - {msg.MemberCard}[{msg.MemberUin}]";
-        var qqList = args[0].Replace("，", ",").Split(',');
-        var reason = string.Join(" ", args.Skip(1));
-        
-        var documents = new List<BsonDocument>();
-
-        foreach (var qq in qqList)
-        {
-            var document = new BsonDocument()
-            {
-                { "QQCode", qq },
-                { "Reason", reason },
-                { "Source", source },
-                { "Time", msg.EventTime }
-            };
-            documents.Add(document);
-        }
-        
-        collection.InsertMany(documents);
-        return new MessageBuilder().Text($"已将{documents.Count}个QQ加入黑名单");
-    }
+    // [Command("blockquery",
+    //     Name = "BlockQuery",
+    //     Alias = new[] { "banquery", "banq", "blockq", "查黑" },
+    //     Permission = PermissionLevel.Admin,
+    //     Matching = Matching.StartsWithLeadChar,
+    //     Description = "Add a user to the block list")]
+    // public static MessageBuilder OnCommandBlockQuery(Bot bot, GroupMessageEvent msg)
+    // {
+    //     var args = msg.ParseArgListFromMsgEvent();
+    //     if (args.Count < 1)
+    //         return new MessageBuilder().Text("指令格式: /blockq <qqCode> <reason>");
+    //     
+    //     var mongoUrl = BotApp.Config.MongoUrl;
+    //     var client = new MongoClient(mongoUrl);
+    //     var database = client.GetDatabase("vastsea");
+    //     var collection = database.GetCollection<BsonDocument>("blockList");
+    //     
+    //     var source = $"{msg.GroupName}[{msg.GroupUin}] - {msg.MemberCard}[{msg.MemberUin}]";
+    //     var qqList = args[0].Replace("，", ",").Split(',');
+    //     var reason = string.Join(" ", args.Skip(1));
+    //     
+    //     var documents = new List<BsonDocument>();
+    //
+    //     foreach (var qq in qqList)
+    //     {
+    //         var document = new BsonDocument()
+    //         {
+    //             { "QQCode", qq },
+    //             { "Reason", reason },
+    //             { "Source", source },
+    //             { "Time", msg.EventTime }
+    //         };
+    //         documents.Add(document);
+    //     }
+    //     
+    //     collection.InsertMany(documents);
+    //     return new MessageBuilder().Text($"已将{documents.Count}个QQ加入黑名单");
+    // }
 }

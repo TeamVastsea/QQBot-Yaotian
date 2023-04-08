@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using YaoTian.ModuleMgr;
+using YaoTian.Modules.GitLab;
 
 
 namespace YaoTian.Modules;
@@ -76,7 +77,8 @@ public class CallbackController : Controller
                     {
                         var text = EventHandlers.ParsePushEvent(jsonObj);
                         BotApp.Logger.Debug("[Gitlab]Push event parsed");
-                        await BotApp.Bot.SendGroupMessage(BotApp.Config.AdminGroup, new MessageBuilder().Text(text));
+                        if (text != null)
+                            await BotApp.Bot.SendGroupMessage(BotApp.Config.AdminGroup, new MessageBuilder().Text(text));
                         return Ok("success");
                     }
 
@@ -166,7 +168,8 @@ public static class EventHandlers
                     $"Repo url: {projectUrl}";
                     // $"Repo size: {repoSizeFormatted}";
         
-        return msg;
+        Graphic.DrawPushCard(pushJsonModel);
+        return null;
     }
 }
 
@@ -192,7 +195,7 @@ public class Startup
 public class Webhook: ModuleBase
 {
     private static IWebHost Host { get; set; }
-    public static void Start()
+    public static async Task Start()
     {
         var host = WebHost.CreateDefaultBuilder()
             .ConfigureLogging((hostingContext, loggingBuilder) =>
@@ -203,10 +206,8 @@ public class Webhook: ModuleBase
             .UseStartup<Startup>()
             .Build();
 
-        host.Run();
+        await host.StartAsync();
         Host = host;
-        BotApp.Logger.Debug("[Uptime]Webhook server started");
-        BotApp.Logger.Debug("[Gitlab]Webhook server started");
 
     }
     

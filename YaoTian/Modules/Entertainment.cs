@@ -18,7 +18,7 @@ internal class EntertainmentModule : ModuleBase
         Description = "Get your lucky number for today")]
     public static MessageBuilder OnCommandLucy(Bot bot, GroupMessageEvent msg)
     {
-        var args = Utils.ParseArgListFromMsgEvent(msg);
+        var args = msg.ParseArgListFromMsgEvent();
         var luckNum = CalcDailyLuck(args.Count == 0 ? msg.MemberUin.ToString() : args[0]);
         var title = args.Count == 0 ? "您" : $"{args[0]} ";
         var comment = luckNum switch

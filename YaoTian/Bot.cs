@@ -51,7 +51,7 @@ public class BotApp
         
         // // strongly don't recommend to use this
         // // only use this if bot login failed to get the error message and debug
-        // Bot.OnLog += (_, e) => Console.WriteLine(e.EventMessage);
+        Bot.OnLog += (_, e) => Console.WriteLine(e.EventMessage);
 
         // Handle the captcha
         Bot.OnCaptcha += (s, e) =>
@@ -84,7 +84,7 @@ public class BotApp
 
         // Handle messages from group
         Bot.OnGroupMessage += Dispatcher_OnMessage;
-        // Bot.OnGroupMemberIncrease += Dispatcher_OnGroupMemberIncrease;
+        Bot.OnGroupMemberIncrease += Dispatcher_OnMemberJoin;
         // _bot.OnFriendRequest += Command.OnFriendRequest;
         // _bot.OnGroupInvite += Command.OnGroupInvite;
         
@@ -133,7 +133,7 @@ public class BotApp
     /// <returns></returns>
     private static BotConfig GetConfig()
     {
-        var protocol = OicqProtocol.AndroidPad;
+        var protocol = OicqProtocol.AndroidPhone;
         Logger.Debug($"Using protocol: {protocol.ToString()}");
         return new BotConfig
         {
@@ -218,7 +218,7 @@ public class BotApp
         ModuleMgr.DispatchGroupMessage(bot, msg);
     }
 
-    private void Dispatcher_OnMemberJoin(Bot bot, GroupMessageEvent msg)
+    private void Dispatcher_OnMemberJoin(Bot bot, GroupMemberIncreaseEvent msg)
     {
         var member = msg.MemberUin.ToString();
         var client = new MongoClient(Config.MongoUrl);
@@ -229,14 +229,18 @@ public class BotApp
 
         if (document.Result == null) return;
         bot.SendGroupMessage(msg.GroupUin, new MessageBuilder().At(msg.MemberUin).Text($"你已被拉黑\n原因: {document.Result["Reason"]}\n处理人: {document.Result["Source"]}"));
-        Logger.Info($"Detected Blocked user {msg.MemberCard}[{member}] @ {msg.GroupName}[{msg.GroupUin}]");
-        try
+        Logger.Warn($"Detected Blocked user {msg.MemberNick}[{member}] @ [{msg.GroupUin}]");
+        if(msg.GroupUin == 494978157)
         {
-            bot.GroupKickMember(msg.GroupUin, msg.MemberUin, true);
-        }
-        catch (Exception e)
-        {
-            Logger.Warn(e.Message);
+            try
+            {
+                bot.GroupKickMember(msg.GroupUin, msg.MemberUin, true);
+            }
+            catch (Exception)
+            {
+                Logger.Warn("Failed to kick member");
+                bot.SendGroupMessage(msg.GroupUin, new MessageBuilder().At(msg.MemberUin));
+            }
         }
     }
 
